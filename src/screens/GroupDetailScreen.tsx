@@ -1,0 +1,141 @@
+import React, { useState } from 'react';
+import { TouchableOpacity, View } from 'react-native';
+import { groupsApi } from '../api/endpoints';
+import { GroupDetail } from '../api/types';
+import { AppText, Avatar, ErrorState, Loading, Screen } from '../components/primitives';
+import { useNavigation, useRoute } from '../nav/navigation';
+import { useTheme } from '../theme/ThemeContext';
+import { rupees } from '../util/format';
+import { useApi } from '../util/useApi';
+
+export default function GroupDetailScreen() {
+  const { theme } = useTheme();
+  const nav = useNavigation();
+  const { params } = useRoute<{ id: string; name: string }>();
+  const id = params.id ?? 'hsr';
+  const { data, loading, error, reload } = useApi<GroupDetail>(
+    () => groupsApi.detail(id),
+    [id],
+  );
+  const [tab, setTab] = useState<'balances' | 'expenses'>('balances');
+
+  return (
+    <Screen padded scroll>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 16 }}>
+        <TouchableOpacity onPress={nav.goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <AppText size={22} weight="700" color={theme.textDim}>
+            ‹
+          </AppText>
+        </TouchableOpacity>
+        <AppText size={19} weight="800" numberOfLines={1}>
+          {params.name ?? data?.name ?? 'Group'}
+        </AppText>
+      </View>
+
+      <View style={{ flexDirection: 'row', backgroundColor: theme.surface, borderRadius: 14, padding: 4, marginBottom: 18 }}>
+        {(['balances', 'expenses'] as const).map(t => {
+          const active = tab === t;
+          return (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
+              style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 11, backgroundColor: active ? theme.teal : 'transparent' }}>
+              <AppText size={13} weight="800" color={active ? theme.onAccent : theme.textDim}>
+                {t === 'balances' ? 'Balances' : 'Expenses'}
+              </AppText>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {loading ? <Loading /> : null}
+      {error ? <ErrorState message={error} onRetry={reload} /> : null}
+
+      {data && tab === 'balances' ? (
+        <View>
+          <View style={{ backgroundColor: theme.tealBg, borderRadius: 18, padding: 18, alignItems: 'center', marginBottom: 16 }}>
+            <AppText size={12} weight="800" color={theme.tealText}>
+              You're owed, overall
+            </AppText>
+            <AppText size={30} weight="900" color={theme.teal} style={{ marginTop: 4 }}>
+              {rupees(data.balances.overallOwed)}
+            </AppText>
+          </View>
+          {data.balances.rows.map(b => (
+            <View
+              key={b.id}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Avatar initials={b.initials} bg={b.avatarBg} size={32} />
+                <AppText size={14} weight="700">
+                  {b.label}
+                </AppText>
+              </View>
+              <AppText size={14} weight="900" color={b.direction === 'owed' ? theme.teal : theme.coral}>
+                {rupees(b.amount)}
+              </AppText>
+            </View>
+          ))}
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>
+            <TouchableOpacity
+              onPress={() => nav.push('SettleUp', { id })}
+              style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
+              <AppText size={13} weight="800">
+                Settle up
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => nav.push('AddExpense', { id })}
+              style={{ flex: 1, backgroundColor: theme.teal, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
+              <AppText size={13} weight="800" color={theme.onAccent}>
+                Add expense
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
+      {data && tab === 'expenses' ? (
+        <View>
+          <TouchableOpacity
+            onPress={() => nav.push('Search', { id })}
+            style={{ backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 6 }}>
+            <AppText size={14} weight="600" color={theme.textFaint}>
+              🔍 Search expenses
+            </AppText>
+          </TouchableOpacity>
+          {data.expenses.map(e => (
+            <TouchableOpacity
+              key={e.id}
+              activeOpacity={0.85}
+              onPress={() => nav.push('ExpenseDetail', { groupId: id, expenseId: e.id })}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                <Avatar initials={e.icon} bg={e.tint} size={38} radius={13} textSize={13} />
+                <View style={{ flex: 1 }}>
+                  <AppText size={13} weight="800" numberOfLines={1}>
+                    {e.title}
+                  </AppText>
+                  <AppText size={11} weight="700" color={theme.textFaint} style={{ marginTop: 2 }}>
+                    {e.category} · paid by {e.paidByName}
+                  </AppText>
+                </View>
+              </View>
+              <AppText size={13} weight="900">
+                {rupees(e.amount)}
+              </AppText>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            onPress={() => nav.push('ScanReceipt', { id })}
+            style={{ backgroundColor: theme.tealBg, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 16 }}>
+            <AppText size={13} weight="800" color={theme.tealText}>
+              Scan a receipt
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+    </Screen>
+  );
+}

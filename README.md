@@ -1,8 +1,74 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Splitkaro
 
-# Getting Started
+Split shared expenses with your flatmates and friends — a React Native app that
+mirrors the design mockup, backed by a mock API that returns **static** JSON for
+both **auth** and **data**.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## What's here
+
+```
+App.tsx              # app entry: providers + navigator wiring
+src/
+  api/               # fetch client, typed endpoints, response types
+  auth/              # auth context (token + user)
+  theme/             # light/dark theme (mockup colors) + provider
+  nav/               # tiny JS-only stack navigator (no native deps)
+  components/        # shared UI primitives (Screen, Avatar, buttons, …)
+  screens/           # one file per screen (see below)
+  util/              # rupee formatter, useApi hook
+server/              # Express mock API — static responses for auth + data
+```
+
+### Screens (from the mockup)
+
+Login → Profile setup → Groups → Group detail (Balances / Expenses tabs) →
+Create group · Add expense (+ paid-by picker) · Split unevenly · Expense detail ·
+Settle up · Search · Scan receipt → Review.
+
+## Data & auth come from an API
+
+The app never hardcodes data — every screen calls the mock API over HTTP
+(`src/api`). The server in `/server` returns fixed, static responses (see
+`server/data.js`), so there is no database and login always succeeds with a demo
+user. This keeps the API contract real while the payloads stay predictable.
+
+## Run it
+
+**1. Start the mock API** (terminal 1):
+
+```bash
+cd server
+npm install      # first time only
+npm start        # http://localhost:3001
+```
+
+**2. Start Metro + the app** (terminal 2, from the repo root):
+
+```bash
+npm install      # first time only
+npm start        # Metro bundler
+
+# then, in terminal 3:
+npm run ios      # or: npm run android
+```
+
+### API host per platform
+
+`src/api/client.ts` targets the host machine automatically:
+
+- **iOS simulator** → `http://localhost:3001`
+- **Android emulator** → `http://10.0.2.2:3001`
+
+Running on a **physical device**? Set `API_HOST` in `src/api/client.ts` to your
+computer's LAN IP (e.g. `192.168.1.x`) and make sure the device is on the same
+network.
+
+## Notes
+
+- The navigator is a ~90-line JS stack (`src/nav/navigation.tsx`) so the app runs
+  in Metro with no extra pod/gradle linking.
+- If a screen shows an error state, the mock API isn't reachable — start it with
+  `cd server && npm start`.
 
 ## Step 1: Start Metro
 

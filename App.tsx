@@ -1,45 +1,54 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
+ * Splitkaro — split shared expenses with flatmates & friends.
  *
- * @format
+ * Screens are driven by a tiny JS stack navigator (src/nav). All data and auth
+ * come from the mock API server in /server (static JSON responses).
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import React from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider } from './src/auth/AuthContext';
+import { NavigatorProvider, RouteName } from './src/nav/navigation';
+import { ThemeProvider } from './src/theme/ThemeContext';
+
+import LoginScreen from './src/screens/LoginScreen';
+import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
+import GroupsScreen from './src/screens/GroupsScreen';
+import GroupDetailScreen from './src/screens/GroupDetailScreen';
+import CreateGroupScreen from './src/screens/CreateGroupScreen';
+import AddExpenseScreen from './src/screens/AddExpenseScreen';
+import SplitUnevenScreen from './src/screens/SplitUnevenScreen';
+import ExpenseDetailScreen from './src/screens/ExpenseDetailScreen';
+import SettleUpScreen from './src/screens/SettleUpScreen';
+import SearchScreen from './src/screens/SearchScreen';
+import ScanReceiptScreen from './src/screens/ScanReceiptScreen';
+import ScanReviewScreen from './src/screens/ScanReviewScreen';
+
+const screens: Record<RouteName, React.ComponentType> = {
+  Login: LoginScreen,
+  ProfileSetup: ProfileSetupScreen,
+  Groups: GroupsScreen,
+  GroupDetail: GroupDetailScreen,
+  CreateGroup: CreateGroupScreen,
+  AddExpense: AddExpenseScreen,
+  SplitUneven: SplitUnevenScreen,
+  ExpenseDetail: ExpenseDetailScreen,
+  SettleUp: SettleUpScreen,
+  Search: SearchScreen,
+  ScanReceipt: ScanReceiptScreen,
+  ScanReview: ScanReviewScreen,
+};
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <ThemeProvider>
+        <AuthProvider>
+          <NavigatorProvider initial={{ name: 'Login' }} screens={screens} />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
