@@ -84,3 +84,48 @@ export type ReceiptScan = {
   date: string;
   targetGroup: string;
 };
+
+/** Raw shape returned by GET /api/friends/requests (Swagger: FriendRequestView). */
+export type FriendRequestView = {
+  friendshipId: string;
+  otherUser: UserSummary;
+  status: 'PENDING' | 'ACCEPTED';
+  incoming: boolean;
+};
+
+export type FriendRequest = {
+  friendshipId: string;
+  person: Member;
+  incoming: boolean;
+};
+
+/** A person you share expenses with and your net balance with them (positive = they owe you). */
+export type PersonBalance = { person: Member; amount: number };
+
+/** Raw shape returned by GET /api/notifications (Swagger: NotificationView). */
+export type NotificationView = {
+  id: string;
+  type:
+    | 'EXPENSE_ADDED'
+    | 'EXPENSE_UPDATED'
+    | 'EXPENSE_DELETED'
+    | 'SETTLEMENT_RECORDED'
+    | 'ADDED_TO_GROUP'
+    | 'FRIEND_REQUEST'
+    | 'FRIEND_ACCEPTED'
+    | 'COMMENT_ADDED';
+  message: string;
+  actorId?: string;
+  groupId?: string;
+  expenseId?: string;
+  read: boolean;
+  createdAt: string;
+};
+
+export type ActivityItem = {
+  id: string;
+  message: string;
+  read: boolean;
+  when: string;
+  icon: string;
+};

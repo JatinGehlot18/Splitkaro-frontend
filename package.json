@@ -10,9 +10,13 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-clipboard/clipboard": "^1.16.3",
     "react": "19.2.3",
     "react-native": "0.86.0",
-    "react-native-safe-area-context": "^5.8.0"
+    "react-native-camera-kit": "^18.0.0",
+    "react-native-qrcode-svg": "^6.3.21",
+    "react-native-safe-area-context": "^5.8.0",
+    "react-native-svg": "^15.15.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

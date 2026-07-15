@@ -258,9 +258,6 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       <AppText color={theme.textDim} size={13} style={{ textAlign: 'center' }}>
         {message}
       </AppText>
-      <AppText color={theme.textFaint} size={11} style={{ textAlign: 'center' }}>
-        Is the mock API running? (cd server && npm start)
-      </AppText>
       {onRetry ? (
         <TouchableOpacity onPress={onRetry}>
           <AppText color={theme.teal} size={13} weight="800">

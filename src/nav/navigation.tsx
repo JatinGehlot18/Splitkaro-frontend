@@ -2,9 +2,11 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
+import { View } from 'react-native';
 
 /**
  * A tiny JS-only stack navigator. Avoids native navigation deps so the app
@@ -16,6 +18,10 @@ export type RouteName =
   | 'Login'
   | 'ProfileSetup'
   | 'Groups'
+  | 'Friends'
+  | 'Activity'
+  | 'Account'
+  | 'ScanCode'
   | 'GroupDetail'
   | 'CreateGroup'
   | 'AddExpense'
@@ -25,6 +31,9 @@ export type RouteName =
   | 'Search'
   | 'ScanReceipt'
   | 'ScanReview';
+
+/** Top-level sections that show the persistent bottom tab bar. */
+export const TAB_ROUTES: RouteName[] = ['Groups', 'Friends', 'Activity', 'Account'];
 
 export type Route = { name: RouteName; params?: Record<string, any> };
 
@@ -39,12 +48,25 @@ type NavContextValue = {
 const NavContext = createContext<NavContextValue | null>(null);
 const RouteContext = createContext<Route>({ name: 'Login' });
 
+/**
+ * Module-level escape hatch so code outside the component tree (the auth
+ * client's session-expired handler) can redirect to Login without needing
+ * navigation prop-drilled through AuthContext, which sits above the
+ * navigator in App.tsx.
+ */
+let navActions: NavContextValue | null = null;
+export function getNavActions(): NavContextValue | null {
+  return navActions;
+}
+
 export function NavigatorProvider({
   initial,
   screens,
+  tabBar,
 }: {
   initial: Route;
   screens: Record<RouteName, React.ComponentType>;
+  tabBar?: React.ReactNode;
 }) {
   const [stack, setStack] = useState<Route[]>([initial]);
 
@@ -72,10 +94,19 @@ export function NavigatorProvider({
     [push, replace, reset, goBack, stack.length],
   );
 
+  useEffect(() => {
+    navActions = value;
+  }, [value]);
+
   return (
     <NavContext.Provider value={value}>
       <RouteContext.Provider value={current}>
-        <Screen />
+        <View style={{ flex: 1 }}>
+          <View style={{ flex: 1 }}>
+            <Screen />
+          </View>
+          {tabBar}
+        </View>
       </RouteContext.Provider>
     </NavContext.Provider>
   );

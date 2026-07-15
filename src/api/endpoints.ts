@@ -1,14 +1,19 @@
 import { api, graphql } from './client';
-import { avatarColorFor, initialsOf, longDate, shortDate } from '../util/format';
+import { avatarColorFor, initialsOf, longDate, shortDate, timeAgo } from '../util/format';
 import {
+  ActivityItem,
   AuthResponse,
   BalanceRow,
   Category,
   Expense,
   ExpenseDetail,
+  FriendRequest,
+  FriendRequestView,
   Group,
   GroupDetail,
   Member,
+  NotificationView,
+  PersonBalance,
   ReceiptScan,
   User,
   UserSummary,
@@ -301,4 +306,73 @@ export const settlementsApi = {
 export const receiptsApi = {
   scan: (): Promise<ReceiptScan> =>
     Promise.reject(new Error('Receipt scanning isn’t available yet — the API has no OCR endpoint.')),
+};
+
+function toFriendRequest(r: FriendRequestView): FriendRequest {
+  return { friendshipId: r.friendshipId, person: memberFrom(r.otherUser), incoming: r.incoming };
+}
+
+export const friendsApi = {
+  list: (userId: string, token?: string) =>
+    api.get<UserSummary[]>(`/api/friends?userId=${encodeURIComponent(userId)}`, token).then(list => list.map(u => memberFrom(u))),
+  pendingRequests: (userId: string, token?: string) =>
+    api
+      .get<FriendRequestView[]>(`/api/friends/requests?userId=${encodeURIComponent(userId)}`, token)
+      .then(list => list.map(toFriendRequest)),
+  sendRequest: (userId: string, email: string, token?: string) =>
+    api.post<FriendRequestView>(`/api/friends/requests?userId=${encodeURIComponent(userId)}`, { email }, token).then(toFriendRequest),
+  accept: (userId: string, friendshipId: string, token?: string) =>
+    api
+      .post<FriendRequestView>(
+        `/api/friends/requests/${encodeURIComponent(friendshipId)}/accept?userId=${encodeURIComponent(userId)}`,
+        undefined,
+        token,
+      )
+      .then(toFriendRequest),
+  remove: (userId: string, friendshipId: string, token?: string) =>
+    api.del<void>(`/api/friends/${encodeURIComponent(friendshipId)}?userId=${encodeURIComponent(userId)}`, token),
+  /**
+   * Net balance with every person you share expenses with — not just accepted
+   * friends (GraphQL `overallBalances`, scoped by the bearer token). Positive
+   * = they owe you, negative = you owe them. Zero balances are dropped.
+   */
+  balances: (token?: string): Promise<PersonBalance[]> =>
+    graphql<{ overallBalances: { user: UserSummary; netAmount: number }[] }>(
+      `query { overallBalances { user { ${USER_FIELDS} } netAmount } }`,
+      undefined,
+      token,
+    ).then(d =>
+      d.overallBalances
+        .map(b => ({ person: memberFrom(b.user), amount: Number(b.netAmount) }))
+        .filter(b => b.amount !== 0)
+        .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
+    ),
+};
+
+const NOTIFICATION_ICONS: Record<NotificationView['type'], string> = {
+  EXPENSE_ADDED: '🧾',
+  EXPENSE_UPDATED: '✏️',
+  EXPENSE_DELETED: '🗑️',
+  SETTLEMENT_RECORDED: '🤝',
+  ADDED_TO_GROUP: '👥',
+  FRIEND_REQUEST: '👋',
+  FRIEND_ACCEPTED: '✅',
+  COMMENT_ADDED: '💬',
+};
+
+function toActivityItem(n: NotificationView): ActivityItem {
+  return { id: n.id, message: n.message, read: n.read, when: timeAgo(n.createdAt), icon: NOTIFICATION_ICONS[n.type] ?? '🔔' };
+}
+
+export const notificationsApi = {
+  list: (userId: string, token?: string) =>
+    api.get<NotificationView[]>(`/api/notifications?userId=${encodeURIComponent(userId)}`, token).then(list => list.map(toActivityItem)),
+  unreadCount: (userId: string, token?: string) =>
+    api
+      .get<Record<string, number>>(`/api/notifications/unread-count?userId=${encodeURIComponent(userId)}`, token)
+      .then(d => Object.values(d)[0] ?? 0),
+  markRead: (userId: string, notificationId: string, token?: string) =>
+    api.post<void>(`/api/notifications/${encodeURIComponent(notificationId)}/read?userId=${encodeURIComponent(userId)}`, undefined, token),
+  markAllRead: (userId: string, token?: string) =>
+    api.post<void>(`/api/notifications/read-all?userId=${encodeURIComponent(userId)}`, undefined, token),
 };

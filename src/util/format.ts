@@ -30,6 +30,21 @@ export function longDate(iso: string): string {
     : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** e.g. "3h ago", "5d ago", or a short date once it's over a week old. */
+export function timeAgo(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const seconds = Math.max(0, (Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return shortDate(iso);
+}
+
 /** Format a number as Indian-grouped rupees, e.g. 32000 -> "₹32,000". */
 export function rupees(amount: number): string {
   const sign = amount < 0 ? '-' : '';
