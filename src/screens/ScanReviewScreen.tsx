@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, TouchableOpacity, View } from 'react-native';
 import { expensesApi } from '../api/endpoints';
 import { ReceiptScan } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Screen } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -10,25 +11,30 @@ import { rupees } from '../util/format';
 export default function ScanReviewScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
+  const { token, user } = useAuth();
   const { params } = useRoute<{ id: string; scan: ReceiptScan }>();
   const scan = params.scan;
   const [saving, setSaving] = useState(false);
 
   async function use() {
+    if (!user) return;
     try {
       setSaving(true);
-      await expensesApi.create({
-        groupId: params.id,
-        description: scan.merchant,
-        amount: scan.amount,
-        category: scan.category,
-        source: 'receipt-scan',
-      });
+      await expensesApi.create(
+        {
+          groupId: params.id,
+          description: scan.merchant,
+          amount: scan.amount,
+          splitType: 'EQUAL',
+          participants: [{ userId: user.id }],
+        },
+        token ?? undefined,
+      );
       Alert.alert('Added', 'Expense created from the receipt.', [
         { text: 'OK', onPress: () => nav.reset('Groups') },
       ]);
-    } catch {
-      Alert.alert('Could not save', 'Check that the mock API is running.');
+    } catch (e) {
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Check that the API is running.');
     } finally {
       setSaving(false);
     }

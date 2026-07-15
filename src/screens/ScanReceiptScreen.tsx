@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { receiptsApi } from '../api/endpoints';
 import { AppText } from '../components/primitives';
@@ -17,6 +17,8 @@ export default function ScanReceiptScreen() {
       setScanning(true);
       const scan = await receiptsApi.scan();
       nav.replace('ScanReview', { id: params.id, scan });
+    } catch (e) {
+      Alert.alert('Not available yet', e instanceof Error ? e.message : 'Receipt scanning is unavailable.');
     } finally {
       setScanning(false);
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { groupsApi } from '../api/endpoints';
 import { ExpenseDetail } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, ErrorState, Loading, Screen } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -11,10 +12,11 @@ import { useApi } from '../util/useApi';
 export default function ExpenseDetailScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
+  const { token } = useAuth();
   const { params } = useRoute<{ groupId: string; expenseId: string }>();
   const { data, loading, error, reload } = useApi<ExpenseDetail>(
-    () => groupsApi.expenseDetail(params.groupId ?? 'hsr', params.expenseId ?? 'bigbasket'),
-    [params.groupId, params.expenseId],
+    () => groupsApi.expenseDetail(params.expenseId, token ?? undefined),
+    [params.expenseId, token],
   );
 
   return (

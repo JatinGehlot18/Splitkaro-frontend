@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
 import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
-import { groupsApi, referenceApi } from '../api/endpoints';
+import { groupsApi } from '../api/endpoints';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, Header, PrimaryButton, Screen, SectionLabel } from '../components/primitives';
 import { useNavigation } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
-import { useApi } from '../util/useApi';
 
-const INITIAL_INVITED = ['Ananya Iyer', 'Vikram Rao', 'Priya Nair'];
+const SWATCHES = ['#7FD8C8', '#F0A58F', '#D8C98A', '#C3AEDD', '#A7C0E8'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CreateGroupScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
-  const [name, setName] = useState('Indiranagar Cousins');
+  const { token } = useAuth();
+  const [name, setName] = useState('');
   const [colorIdx, setColorIdx] = useState(0);
-  const [invited, setInvited] = useState<string[]>(INITIAL_INVITED);
+  const [invited, setInvited] = useState<string[]>([]);
+  const [inviteInput, setInviteInput] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const { data: colors } = useApi<string[]>(() => referenceApi.groupColors(), []);
-  const swatches = colors ?? ['#7FD8C8', '#F0A58F', '#D8C98A', '#C3AEDD', '#A7C0E8'];
 
   const initials =
     name
@@ -27,13 +27,33 @@ export default function CreateGroupScreen() {
       .slice(0, 2)
       .toUpperCase() || 'GR';
 
+  function addInvite() {
+    const email = inviteInput.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert('Enter a valid email', 'e.g. flatmate@example.com');
+      return;
+    }
+    if (!invited.includes(email)) setInvited(list => [...list, email]);
+    setInviteInput('');
+  }
+
   async function create() {
+    if (!name.trim()) {
+      Alert.alert('Name your group', 'Give the group a name first.');
+      return;
+    }
     try {
       setSaving(true);
-      await groupsApi.create({ name, color: swatches[colorIdx], invited });
+      const { failedInvites } = await groupsApi.create(
+        { name: name.trim(), color: SWATCHES[colorIdx], invitedEmails: invited },
+        token ?? undefined,
+      );
+      if (failedInvites.length) {
+        Alert.alert('Some invites failed', `Could not add: ${failedInvites.join(', ')}`);
+      }
       nav.reset('Groups');
-    } catch {
-      Alert.alert('Could not create group', 'Check that the mock API is running.');
+    } catch (e) {
+      Alert.alert('Could not create group', e instanceof Error ? e.message : 'Check that the API is running.');
     } finally {
       setSaving(false);
     }
@@ -46,7 +66,7 @@ export default function CreateGroupScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 22 }}>
-        <Avatar initials={initials} bg={swatches[colorIdx]} size={56} radius={18} textSize={18} />
+        <Avatar initials={initials} bg={SWATCHES[colorIdx]} size={56} radius={18} textSize={18} />
         <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 4 }}>
           <TextInput
             value={name}
@@ -60,7 +80,7 @@ export default function CreateGroupScreen() {
 
       <SectionLabel>Group color</SectionLabel>
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-        {swatches.map((c, i) => (
+        {SWATCHES.map((c, i) => (
           <TouchableOpacity
             key={c + i}
             onPress={() => setColorIdx(i)}
@@ -77,10 +97,18 @@ export default function CreateGroupScreen() {
       </View>
 
       <SectionLabel>Add flatmates</SectionLabel>
-      <View style={{ backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 14 }}>
-        <AppText size={14} weight="600" color={theme.textFaint}>
-          Search name, phone or email
-        </AppText>
+      <View style={{ backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 4, marginBottom: 14 }}>
+        <TextInput
+          value={inviteInput}
+          onChangeText={setInviteInput}
+          onSubmitEditing={addInvite}
+          returnKeyType="done"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="flatmate@example.com"
+          placeholderTextColor={theme.textFaint}
+          style={{ fontWeight: '600', fontSize: 14, color: theme.text, paddingVertical: 12 }}
+        />
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
         {invited.map(n => (

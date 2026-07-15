@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
-import { expensesApi, referenceApi } from '../api/endpoints';
+import { categoriesApi, expensesApi, groupsApi } from '../api/endpoints';
 import { Category, Member } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, Loading, Screen, SectionLabel } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -10,20 +11,28 @@ import { useApi } from '../util/useApi';
 export default function AddExpenseScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
+  const { token, user } = useAuth();
   const { params } = useRoute<{ id: string }>();
-  const groupId = params.id ?? 'hsr';
+  const groupId = params.id;
 
-  const { data: categories } = useApi<Category[]>(() => referenceApi.categories(), []);
-  const { data: members, loading } = useApi<Member[]>(() => referenceApi.members(), []);
+  const { data: categories } = useApi<Category[]>(() => categoriesApi.list(token ?? undefined), [token]);
+  const { data: members, loading } = useApi<Member[]>(
+    () => groupsApi.members(groupId, user?.id, token ?? undefined),
+    [groupId, user?.id, token],
+  );
 
-  const [description, setDescription] = useState('Swiggy dinner');
-  const [amount, setAmount] = useState('860');
-  const [categoryId, setCategoryId] = useState('food');
-  const [paidBy, setPaidBy] = useState('rohan');
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [paidBy, setPaidBy] = useState(user?.id ?? '');
   const [splitType, setSplitType] = useState<'equal' | 'unequal'>('equal');
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) setPaidBy(id => id || user.id);
+  }, [user?.id]);
 
   // Default everyone selected once members load.
   const participantChecks = useMemo(() => {
@@ -47,26 +56,33 @@ export default function AddExpenseScreen() {
   }
 
   async function save() {
+    if (!description.trim() || !Number(amount)) {
+      Alert.alert('Missing details', 'Enter a description and amount.');
+      return;
+    }
     if (splitType === 'unequal') {
-      nav.push('SplitUneven', { id: groupId, description, amount });
+      nav.push('SplitUneven', { id: groupId, description, amount, categoryId, paidBy });
       return;
     }
     try {
       setSaving(true);
-      await expensesApi.create({
-        groupId,
-        description,
-        amount: Number(amount) || 0,
-        categoryId,
-        paidBy,
-        splitType,
-        participants: members?.filter(m => participantChecks[m.id]).map(m => m.id),
-      });
+      await expensesApi.create(
+        {
+          groupId,
+          description,
+          amount: Number(amount) || 0,
+          categoryId: categoryId || undefined,
+          paidBy,
+          splitType: 'EQUAL',
+          participants: (members ?? []).filter(m => participantChecks[m.id]).map(m => ({ userId: m.id })),
+        },
+        token ?? undefined,
+      );
       Alert.alert('Saved', 'Expense added to the group.', [
         { text: 'OK', onPress: () => nav.goBack() },
       ]);
-    } catch {
-      Alert.alert('Could not save', 'Check that the mock API is running.');
+    } catch (e) {
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Check that the API is running.');
     } finally {
       setSaving(false);
     }
@@ -145,7 +161,7 @@ export default function AddExpenseScreen() {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 20 }}>
         {paidByMember ? <Avatar initials={paidByMember.initials} bg={paidByMember.avatarBg} size={32} /> : null}
         <AppText size={13} weight="700">
-          {paidBy === 'multiple' ? 'Multiple people' : paidByMember?.name ?? 'Choose'}
+          {paidByMember?.name ?? 'Choose'}
         </AppText>
         <AppText size={13} weight="700" color={theme.textFaint} style={{ marginLeft: 'auto' }}>
           Change ›
@@ -235,10 +251,6 @@ export default function AddExpenseScreen() {
           setPaidBy(id);
           setPickerOpen(false);
         }}
-        onMultiple={() => {
-          setPaidBy('multiple');
-          setPickerOpen(false);
-        }}
       />
     </Screen>
   );
@@ -250,14 +262,12 @@ function PaidByPicker({
   selected,
   onClose,
   onChoose,
-  onMultiple,
 }: {
   open: boolean;
   members: Member[];
   selected: string;
   onClose: () => void;
   onChoose: (id: string) => void;
-  onMultiple: () => void;
 }) {
   const { theme } = useTheme();
   return (
@@ -294,11 +304,6 @@ function PaidByPicker({
             </TouchableOpacity>
           );
         })}
-        <TouchableOpacity onPress={onMultiple} style={{ paddingVertical: 16, marginTop: 6 }}>
-          <AppText size={14} weight="700" color={theme.textDim}>
-            Multiple people
-          </AppText>
-        </TouchableOpacity>
       </View>
     </Modal>
   );

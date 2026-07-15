@@ -1,24 +1,33 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
-import { expensesApi, referenceApi } from '../api/endpoints';
+import { expensesApi, groupsApi } from '../api/endpoints';
 import { Member } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, Header, Loading, PrimaryButton, Screen } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
 import { rupees } from '../util/format';
 import { useApi } from '../util/useApi';
 
-const DEFAULTS: Record<string, string> = { rohan: '800', ananya: '700', vikram: '500', priya: '450' };
-
 export default function SplitUnevenScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
-  const { params } = useRoute<{ id: string; description?: string; amount?: string }>();
-  const total = Number(params.amount) || 2450;
-  const description = params.description ?? 'BigBasket groceries';
+  const { token, user } = useAuth();
+  const { params } = useRoute<{
+    id: string;
+    description?: string;
+    amount?: string;
+    categoryId?: string;
+    paidBy?: string;
+  }>();
+  const total = Number(params.amount) || 0;
+  const description = params.description ?? '';
 
-  const { data: members, loading } = useApi<Member[]>(() => referenceApi.members(), []);
-  const [amounts, setAmounts] = useState<Record<string, string>>(DEFAULTS);
+  const { data: members, loading } = useApi<Member[]>(
+    () => groupsApi.members(params.id, user?.id, token ?? undefined),
+    [params.id, user?.id, token],
+  );
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const assigned = useMemo(
@@ -34,16 +43,23 @@ export default function SplitUnevenScreen() {
     }
     try {
       setSaving(true);
-      await expensesApi.create({
-        groupId: params.id,
-        description,
-        amount: total,
-        splitType: 'unequal',
-        shares: amounts,
-      });
+      await expensesApi.create(
+        {
+          groupId: params.id,
+          description,
+          amount: total,
+          categoryId: params.categoryId || undefined,
+          paidBy: params.paidBy || user?.id,
+          splitType: 'EXACT',
+          participants: Object.entries(amounts)
+            .filter(([, v]) => Number(v) > 0)
+            .map(([userId, v]) => ({ userId, value: Number(v) })),
+        },
+        token ?? undefined,
+      );
       Alert.alert('Saved', 'Split saved.', [{ text: 'OK', onPress: () => nav.reset('Groups') }]);
-    } catch {
-      Alert.alert('Could not save', 'Check that the mock API is running.');
+    } catch (e) {
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Check that the API is running.');
     } finally {
       setSaving(false);
     }

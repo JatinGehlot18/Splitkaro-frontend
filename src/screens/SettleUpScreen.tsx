@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Alert, TouchableOpacity, View } from 'react-native';
 import { groupsApi, settlementsApi } from '../api/endpoints';
 import { GroupDetail } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, ErrorState, Header, Loading, PrimaryButton, Screen, SectionLabel } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -11,11 +12,12 @@ import { useApi } from '../util/useApi';
 export default function SettleUpScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
+  const { token, user } = useAuth();
   const { params } = useRoute<{ id: string }>();
-  const groupId = params.id ?? 'hsr';
+  const groupId = params.id;
   const { data, loading, error, reload } = useApi<GroupDetail>(
-    () => groupsApi.detail(groupId),
-    [groupId],
+    () => groupsApi.detail(groupId, user!.id, token ?? undefined),
+    [groupId, token, user?.id],
   );
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -28,14 +30,18 @@ export default function SettleUpScreen() {
 
   async function record() {
     if (!active) return;
+    if (active.direction === 'owed') {
+      Alert.alert('Not supported yet', `${active.label} needs to record this payment from their own account.`);
+      return;
+    }
     try {
       setSaving(true);
-      await settlementsApi.record({ groupId, counterparty: active.id, amount: active.amount });
-      Alert.alert('Payment recorded', `Settled ${rupees(active.amount)} with ${active.label.replace(/ owes you| you owe /gi, ' ')}.`, [
+      await settlementsApi.record({ groupId, receiverId: active.id, amount: active.amount }, token ?? undefined);
+      Alert.alert('Payment recorded', `Settled ${rupees(active.amount)} with ${active.label}.`, [
         { text: 'OK', onPress: () => nav.goBack() },
       ]);
-    } catch {
-      Alert.alert('Could not record', 'Check that the mock API is running.');
+    } catch (e) {
+      Alert.alert('Could not record', e instanceof Error ? e.message : 'Check that the API is running.');
     } finally {
       setSaving(false);
     }

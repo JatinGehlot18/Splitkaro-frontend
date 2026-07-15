@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { groupsApi } from '../api/endpoints';
 import { GroupDetail } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, ErrorState, Loading, Screen } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -11,11 +12,12 @@ import { useApi } from '../util/useApi';
 export default function GroupDetailScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
+  const { token, user } = useAuth();
   const { params } = useRoute<{ id: string; name: string }>();
-  const id = params.id ?? 'hsr';
+  const id = params.id;
   const { data, loading, error, reload } = useApi<GroupDetail>(
-    () => groupsApi.detail(id),
-    [id],
+    () => groupsApi.detail(id, user!.id, token ?? undefined),
+    [id, token, user?.id],
   );
   const [tab, setTab] = useState<'balances' | 'expenses'>('balances');
 

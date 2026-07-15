@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { TextInput, TouchableOpacity, View } from 'react-native';
 import { groupsApi } from '../api/endpoints';
 import { Expense } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, Header, Loading, Screen } from '../components/primitives';
 import { useNavigation, useRoute } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -10,19 +11,20 @@ import { rupees } from '../util/format';
 export default function SearchScreen() {
   const { theme } = useTheme();
   const nav = useNavigation();
+  const { token } = useAuth();
   const { params } = useRoute<{ id: string }>();
-  const groupId = params.id ?? 'hsr';
-  const [query, setQuery] = useState('swiggy');
+  const groupId = params.id;
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Debounced search hitting the API each time the query changes.
+  // No server-side search endpoint — debounce just avoids refetching on every keystroke.
   useEffect(() => {
     let alive = true;
     setLoading(true);
     const t = setTimeout(() => {
       groupsApi
-        .search(groupId, query)
+        .search(groupId, query, token ?? undefined)
         .then(r => {
           if (alive) setResults(r.results);
         })
@@ -34,7 +36,7 @@ export default function SearchScreen() {
       alive = false;
       clearTimeout(t);
     };
-  }, [groupId, query]);
+  }, [groupId, query, token]);
 
   const noResults = query.trim().length > 0 && !loading && results.length === 0;
 

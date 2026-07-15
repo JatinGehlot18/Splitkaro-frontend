@@ -3,8 +3,9 @@ import { User } from '../api/types';
 
 type AuthContextValue = {
   token: string | null;
+  refreshToken: string | null;
   user: User | null;
-  setAuth: (token: string, user: User) => void;
+  setAuth: (token: string, refreshToken: string, user: User) => void;
   updateUser: (user: User) => void;
   signOut: () => void;
 };
@@ -13,23 +14,27 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
+      refreshToken,
       user,
-      setAuth: (t, u) => {
+      setAuth: (t, rt, u) => {
         setToken(t);
+        setRefreshToken(rt);
         setUser(u);
       },
       updateUser: setUser,
       signOut: () => {
         setToken(null);
+        setRefreshToken(null);
         setUser(null);
       },
     }),
-    [token, user],
+    [token, refreshToken, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

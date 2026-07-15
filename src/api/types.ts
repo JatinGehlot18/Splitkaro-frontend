@@ -7,13 +7,22 @@ export type Member = {
   isMe?: boolean;
 };
 
-export type User = Member & { phone?: string };
+export type User = Member & { email: string; profilePictureUrl?: string };
 
-export type LoginResponse = {
-  token: string;
-  method: string;
-  user: User;
-  needsProfile: boolean;
+/** Raw shape returned by GET/PUT /api/users (Swagger: UserSummary). */
+export type UserSummary = {
+  id: string;
+  email: string;
+  displayName: string;
+  profilePictureUrl?: string;
+};
+
+/** Raw shape returned by /api/auth/{register,login,refresh,google} (Swagger: AuthResponse). */
+export type AuthResponse = {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
 };
 
 export type Group = {

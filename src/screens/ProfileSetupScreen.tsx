@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
-import { authApi } from '../api/endpoints';
+import { profileApi, toUser } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
 import { AppText, PrimaryButton, Screen } from '../components/primitives';
 import { useNavigation } from '../nav/navigation';
@@ -8,20 +8,23 @@ import { useTheme } from '../theme/ThemeContext';
 
 export default function ProfileSetupScreen() {
   const { theme } = useTheme();
-  const { token, user, setAuth } = useAuth();
+  const { token, user, updateUser } = useAuth();
   const nav = useNavigation();
-  const [name, setName] = useState(user?.name ?? 'Rohan Mehta');
-  const [phone, setPhone] = useState(user?.phone ?? '+91 98450 12345');
+  const [name, setName] = useState(user?.name ?? '');
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!token) return;
     try {
       setSaving(true);
-      const res = await authApi.saveProfile(name, phone, token ?? undefined);
-      setAuth(res.token, res.user);
+      const summary = await profileApi.updateProfile(
+        { displayName: name.trim(), profilePictureUrl: user?.profilePictureUrl },
+        token,
+      );
+      updateUser(toUser(summary));
       nav.reset('Groups');
     } catch (e) {
-      Alert.alert('Could not save profile', 'Check that the mock API is running.');
+      Alert.alert('Could not save profile', e instanceof Error ? e.message : 'Check that the API is running.');
     } finally {
       setSaving(false);
     }
@@ -58,25 +61,11 @@ export default function ProfileSetupScreen() {
         <AppText size={12} weight="700" color={theme.textFaint} style={{ marginBottom: 8 }}>
           Your name
         </AppText>
-        <View style={{ backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 4, marginBottom: 20 }}>
+        <View style={{ backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 4 }}>
           <TextInput
             value={name}
             onChangeText={setName}
             placeholder="Your name"
-            placeholderTextColor={theme.textFaint}
-            style={{ fontWeight: '700', fontSize: 14, color: theme.text, paddingVertical: 12 }}
-          />
-        </View>
-
-        <AppText size={12} weight="700" color={theme.textFaint} style={{ marginBottom: 8 }}>
-          Phone number
-        </AppText>
-        <View style={{ backgroundColor: theme.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 4 }}>
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            placeholder="+91"
             placeholderTextColor={theme.textFaint}
             style={{ fontWeight: '700', fontSize: 14, color: theme.text, paddingVertical: 12 }}
           />

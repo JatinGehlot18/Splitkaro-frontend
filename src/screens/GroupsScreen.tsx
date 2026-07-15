@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TextInput, TouchableOpacity, View } from 'react-native';
 import { groupsApi } from '../api/endpoints';
 import { Group } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { AppText, Avatar, ErrorState, Loading, Screen } from '../components/primitives';
 import { useNavigation } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -11,7 +12,8 @@ import { useApi } from '../util/useApi';
 export default function GroupsScreen() {
   const { theme, toggle, isDark } = useTheme();
   const nav = useNavigation();
-  const { data, loading, error, reload } = useApi<Group[]>(() => groupsApi.list(), []);
+  const { token } = useAuth();
+  const { data, loading, error, reload } = useApi<Group[]>(() => groupsApi.list(token ?? undefined), [token]);
   const [query, setQuery] = useState('');
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
 
@@ -22,9 +24,10 @@ export default function GroupsScreen() {
   }, [data, query]);
 
   async function toggleFav(g: Group) {
-    setFavOverrides(o => ({ ...o, [g.id]: !(o[g.id] ?? g.favorite) }));
+    const next = !(favOverrides[g.id] ?? g.favorite);
+    setFavOverrides(o => ({ ...o, [g.id]: next }));
     try {
-      await groupsApi.toggleFavorite(g.id);
+      await groupsApi.toggleFavorite(g.id, next, token ?? undefined);
     } catch {
       // revert on failure
       setFavOverrides(o => ({ ...o, [g.id]: g.favorite }));
