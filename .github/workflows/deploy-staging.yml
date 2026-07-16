@@ -1,0 +1,53 @@
+name: Deploy Staging (Android)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test -- --ci
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - run: npm ci
+
+      - name: Write .env.staging from secret
+        run: printf '%s\n' "${{ secrets.ENV_STAGING }}" > .env.staging
+
+      - name: Build staging APK
+        working-directory: android
+        run: |
+          ENVFILE=.env.staging ./gradlew assembleRelease \
+            -PversionCode=${{ github.run_number }} \
+            -PversionName=staging-${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: splitkaro-staging-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30

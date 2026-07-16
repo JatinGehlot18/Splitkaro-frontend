@@ -1,17 +1,7 @@
-import { Platform } from 'react-native';
+import { AppConfig } from '../config';
 
-/**
- * Base URL for the SplitKaro backend (REST under /api, GraphQL at /graphql).
- *
- * - iOS simulator can reach the host machine on localhost.
- * - Android emulator reaches the host machine on the special IP 10.0.2.2.
- *
- * Edit API_HOST/DEFAULT_PORT if you run the server elsewhere (e.g. a LAN IP
- * when testing on a physical device).
- */
-const DEFAULT_PORT = 4000;
-const API_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-export const API_BASE_URL = `http://${API_HOST}:${DEFAULT_PORT}`;
+/** Base URL for the SplitKaro backend (REST under /api, GraphQL at /graphql), set per-env in .env.* — see src/config. */
+export const API_BASE_URL = AppConfig.apiUrl;
 
 type SpringError = { message?: string; error?: string };
 

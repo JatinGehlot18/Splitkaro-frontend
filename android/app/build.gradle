@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -82,8 +83,9 @@ android {
         applicationId "com.splitkaro"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // CI overrides these with -PversionCode=<run number> -PversionName=<git tag>; local builds keep the defaults.
+        versionCode project.hasProperty('versionCode') ? project.versionCode.toInteger() : 1
+        versionName project.hasProperty('versionName') ? project.versionName : "1.0"
     }
     signingConfigs {
         debug {

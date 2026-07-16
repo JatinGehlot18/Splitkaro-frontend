@@ -1,0 +1,54 @@
+default_platform(:android)
+
+platform :android do
+  desc "Install a dev debug build on a connected device/emulator"
+  lane :dev do
+    ENV["ENVFILE"] = ".env.dev"
+    gradle(task: "installDebug", project_dir: "android/")
+  end
+
+  desc "Build a staging release APK and push it to Firebase App Distribution"
+  lane :staging do
+    ENV["ENVFILE"] = ".env.staging"
+    gradle(task: "assembleRelease", project_dir: "android/")
+    # TODO: fill in your Firebase App ID / tester group, then uncomment.
+    # firebase_app_distribution(
+    #   app: "1:XXXXXXXXX:android:XXXXXXXXXXXXXXXX",
+    #   groups: "internal-testers",
+    #   apk_path: "android/app/build/outputs/apk/release/app-release.apk",
+    # )
+  end
+
+  desc "Build a prod release AAB and upload it to the Play Console internal track"
+  lane :prod do
+    ENV["ENVFILE"] = ".env.prod"
+    gradle(task: "bundleRelease", project_dir: "android/")
+    # TODO: needs PLAY_STORE_JSON_KEY (see Appfile) and a real release keystore
+    # (android/app/build.gradle still signs release builds with the debug
+    # keystore — swap that before shipping to the Play Store). Then uncomment:
+    # upload_to_play_store(
+    #   track: "internal",
+    #   aab: "android/app/build/outputs/bundle/release/app-release.aab",
+    # )
+  end
+end
+
+platform :ios do
+  desc "Build a staging release and push it to TestFlight / Firebase App Distribution"
+  lane :staging do
+    ENV["ENVFILE"] = ".env.staging"
+    build_app(scheme: "Splitkaro", export_method: "app-store")
+    # TODO: requires APPLE_ID / APPLE_TEAM_ID (see Appfile) and a distribution
+    # certificate + provisioning profile (match, or manual). Then uncomment:
+    # upload_to_testflight(skip_waiting_for_build_processing: true)
+  end
+
+  desc "Build a prod release and upload it to App Store Connect"
+  lane :prod do
+    ENV["ENVFILE"] = ".env.prod"
+    build_app(scheme: "Splitkaro", export_method: "app-store")
+    # TODO: same signing prerequisites as staging, plus filled-in App Store
+    # metadata/screenshots (or pass skip_metadata/skip_screenshots). Then:
+    # upload_to_app_store(skip_metadata: true, skip_screenshots: true)
+  end
+end
