@@ -22,4 +22,7 @@ export const AppConfig = {
   env,
   apiUrl: Config.API_URL || LOCAL_API_URL,
   enableLogs: Config.ENABLE_LOGS === 'true',
+  // Not yet set for staging/prod — see .env.dev. Google sign-in is disabled
+  // wherever this is unset (src/auth/googleAuth.ts).
+  googleClientId: Config.GOOGLE_CLIENT_ID || undefined,
 };

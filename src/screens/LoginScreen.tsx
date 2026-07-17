@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
 import { authApi, profileApi, toUser } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
+import { isGoogleSignInCancelled, signInWithGoogle } from '../auth/googleAuth';
 import { AppText, Field, PrimaryButton, Screen } from '../components/primitives';
 import { useNavigation } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -49,11 +50,18 @@ export default function LoginScreen() {
     }
   }
 
-  function googleSignIn() {
-    Alert.alert(
-      'Google sign-in',
-      'Native Google Sign-In isn’t wired up yet — it needs an idToken from the Google SDK.',
-    );
+  async function googleSignIn() {
+    try {
+      setLoading(true);
+      const idToken = await signInWithGoogle();
+      const res = await authApi.loginWithGoogle(idToken);
+      await afterAuth(res);
+    } catch (e) {
+      if (isGoogleSignInCancelled(e)) return;
+      Alert.alert('Google sign-in failed', e instanceof Error ? e.message : 'Could not sign in with Google.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -96,7 +104,40 @@ export default function LoginScreen() {
         </AppText>
       </View>
 
-      <View style={{ flexDirection: 'row', backgroundColor: theme.surface, borderRadius: 14, padding: 4, marginTop: 36 }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={googleSignIn}
+        disabled={loading}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          backgroundColor: theme.surface,
+          borderWidth: 1,
+          borderColor: theme.border,
+          borderRadius: 16,
+          paddingVertical: 15,
+          marginTop: 28,
+          opacity: loading ? 0.6 : 1,
+        }}>
+        <AppText size={15} weight="800" color={theme.text}>
+          G
+        </AppText>
+        <AppText size={14} weight="700">
+          Continue with Google
+        </AppText>
+      </TouchableOpacity>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 22 }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: theme.border }} />
+        <AppText size={12} weight="700" color={theme.textFaint} style={{ marginHorizontal: 12 }}>
+          or
+        </AppText>
+        <View style={{ flex: 1, height: 1, backgroundColor: theme.border }} />
+      </View>
+
+      <View style={{ flexDirection: 'row', backgroundColor: theme.surface, borderRadius: 14, padding: 4, marginTop: 20 }}>
         {(['signin', 'signup'] as const).map(m => (
           <TouchableOpacity
             key={m}
@@ -135,7 +176,9 @@ export default function LoginScreen() {
             placeholder="you@example.com"
             placeholderTextColor={theme.textFaint}
             autoCapitalize="none"
+            autoCorrect={false}
             keyboardType="email-address"
+            textContentType="emailAddress"
             style={{ fontWeight: '700', fontSize: 14, color: theme.text }}
           />
         </Field>
@@ -147,6 +190,7 @@ export default function LoginScreen() {
             placeholder="••••••••"
             placeholderTextColor={theme.textFaint}
             secureTextEntry
+            textContentType={mode === 'signin' ? 'password' : 'newPassword'}
             style={{ fontWeight: '700', fontSize: 14, color: theme.text }}
           />
         </Field>
@@ -158,28 +202,6 @@ export default function LoginScreen() {
             loading={loading}
           />
         </View>
-
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={googleSignIn}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            backgroundColor: theme.surface,
-            borderWidth: 1,
-            borderColor: theme.border,
-            borderRadius: 16,
-            paddingVertical: 15,
-          }}>
-          <AppText size={15} weight="800" color={theme.text}>
-            G
-          </AppText>
-          <AppText size={14} weight="700">
-            Continue with Google
-          </AppText>
-        </TouchableOpacity>
 
         <AppText size={11} weight="600" color={theme.textFaint} style={{ textAlign: 'center', marginTop: 8, lineHeight: 18 }}>
           By continuing you agree to the Terms & Privacy Policy

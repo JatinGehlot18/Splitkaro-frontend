@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Linking, Modal, TextInput, TouchableOpacity, View } from 'react-native';
 import { authApi } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
+import { signOutOfGoogle } from '../auth/googleAuth';
 import { AppText, Avatar, PrimaryButton, Screen, SectionLabel } from '../components/primitives';
 import { useNavigation } from '../nav/navigation';
 import { useTheme } from '../theme/ThemeContext';
@@ -80,6 +81,7 @@ export default function AccountScreen() {
     } catch {
       // best-effort — still sign out locally either way
     }
+    await signOutOfGoogle();
     signOut();
     nav.reset('Login');
   }
