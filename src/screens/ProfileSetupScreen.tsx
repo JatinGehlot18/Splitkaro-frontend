@@ -22,7 +22,7 @@ export default function ProfileSetupScreen() {
         token,
       );
       updateUser(toUser(summary));
-      if (nav.canGoBack) nav.goBack();
+      if (nav.canGoBack()) nav.goBack();
       else nav.reset('Account');
     } catch (e) {
       Alert.alert('Could not save profile', e instanceof Error ? e.message : 'Check that the API is running.');
@@ -34,7 +34,7 @@ export default function ProfileSetupScreen() {
   return (
     <Screen padded scroll contentStyle={{ minHeight: '100%' }}>
       <View style={{ flex: 1, paddingTop: 8 }}>
-        <Header title="Edit profile" onBack={nav.canGoBack ? nav.goBack : undefined} />
+        <Header title="Edit profile" onBack={nav.canGoBack() ? nav.goBack : undefined} />
         <AppText size={13} weight="600" color={theme.textDim} style={{ marginTop: -10, marginBottom: 6 }}>
           This is how flatmates will see you
         </AppText>
