@@ -22,7 +22,7 @@ export default function SettleUpScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const rows = data?.balances.rows ?? [];
+  const rows = useMemo(() => data?.balances.rows ?? [], [data]);
   const active = useMemo(
     () => rows.find(r => r.id === (selected ?? rows[0]?.id)),
     [rows, selected],

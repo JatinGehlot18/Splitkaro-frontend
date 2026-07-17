@@ -46,22 +46,26 @@ jobs:
       - name: Write .env.prod from secret
         run: printf '%s\n' "${{ secrets.ENV_PROD }}" > .env.prod
 
-      - name: Build prod AAB
+      - name: Build prod AAB (Play Store) and APK (sideload/GitHub Release)
         working-directory: android
         run: |
-          ENVFILE=.env.prod ./gradlew bundleRelease \
+          ENVFILE=.env.prod ./gradlew bundleRelease assembleRelease \
             -PversionCode=${{ github.run_number }} \
             -PversionName=${{ steps.version.outputs.name }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: splitkaro-prod-${{ github.ref_name }}
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Attach AAB to the GitHub Release for this tag
+      - name: Attach AAB + APK to the GitHub Release for this tag
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/bundle/release/app-release.aab
+          files: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
 
       # Once fastlane/Fastfile's upload_to_play_store is wired with a real

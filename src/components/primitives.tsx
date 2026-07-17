@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import { pageBg } from '../theme/theme';
 
 /**
  * Full-screen phone frame. With Android edge-to-edge enabled the app draws
