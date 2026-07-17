@@ -46,6 +46,9 @@ jobs:
       - name: Write .env.prod from secret
         run: printf '%s\n' "${{ secrets.ENV_PROD }}" > .env.prod
 
+      - name: Prepare release notes from RELEASE_NOTES.md
+        run: sed "s/{{VERSION}}/${{ steps.version.outputs.name }}/" RELEASE_NOTES.md > /tmp/release-notes.md
+
       - name: Build prod AAB (Play Store) and APK (sideload/GitHub Release)
         working-directory: android
         run: |
@@ -63,10 +66,11 @@ jobs:
       - name: Attach AAB + APK to the GitHub Release for this tag
         uses: softprops/action-gh-release@v3
         with:
+          name: "Splitkaro ${{ steps.version.outputs.name }}"
+          body_path: /tmp/release-notes.md
           files: |
             android/app/build/outputs/bundle/release/app-release.aab
             android/app/build/outputs/apk/release/app-release.apk
-          generate_release_notes: true
 
       # Once fastlane/Fastfile's upload_to_play_store is wired with a real
       # PLAY_STORE_JSON_KEY secret (see fastlane/Appfile) and the release
